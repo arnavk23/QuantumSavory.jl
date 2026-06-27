@@ -14,7 +14,8 @@ using Makie: Makie, Theme, Figure, Axis, Axis3, Aspect, Label, PolyElement, Lege
     hidedecorations!, hidespines!,
     colsize!, resize_to_layout!,
     deregister_interaction!, interactions,
-    DataInspector, Slider, Colorbar, axislegend, cgrad
+    DataInspector, Slider, Colorbar, axislegend, cgrad,
+    rich
 
 import QuantumSavory: registernetplot, registernetplot!, registernetplot_axis, resourceplot_axis, showonplot, showmetadata
 using QuantumSavory: compactstr

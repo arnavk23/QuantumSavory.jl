@@ -47,23 +47,30 @@ end
 function protshowimage(subfig, prot::QuantumSavory.ProtocolZoo.EndNodeController)
     mb = messagebuffer(prot.net, prot.node)
     counts = QuantumSavory.ProtocolZoo._qtcp_message_counts(mb)
-    text_summary = join([
-        "time: $(ConcurrentSim.now(prot.sim))",
-        "register: $(compactstr(prot.net[prot.node]))",
-        "Flow: $(get(counts, QuantumSavory.ProtocolZoo.Flow, 0))",
-        "QDatagram: $(get(counts, QuantumSavory.ProtocolZoo.QDatagram, 0))",
-        "QDatagramSuccess: $(get(counts, QuantumSavory.ProtocolZoo.QTCP.QDatagramSuccess, 0))",
-        "LinkLevelReplyAtSource: $(get(counts, QuantumSavory.ProtocolZoo.LinkLevelReplyAtSource, 0))",
-        "QTCPPairBegin: $(get(counts, QuantumSavory.ProtocolZoo.QTCPPairBegin, 0))",
-        "QTCPPairEnd: $(get(counts, QuantumSavory.ProtocolZoo.QTCPPairEnd, 0))",
-    ], "\n")
-    Label(subfig[1,1], text="EndNodeController @ node $(prot.node)", tellwidth=false)
+    begin_pairs = QuantumSavory.ProtocolZoo._qtcp_pair_summaries(mb, QuantumSavory.ProtocolZoo.QTCPPairBegin)
+    end_pairs = QuantumSavory.ProtocolZoo._qtcp_pair_summaries(mb, QuantumSavory.ProtocolZoo.QTCPPairEnd)
+    pairs_str = if !isempty(begin_pairs) || !isempty(end_pairs)
+        "pairs begin=[$(join(begin_pairs, ", "))] end=[$(join(end_pairs, ", "))]"
+    else
+        "no pairs"
+    end
+    Label(subfig[1,1], text=rich("EndNodeController @ node ", rich("$(prot.node)", font=:bold)), tellwidth=false)
     a = Axis(subfig[2,1])
     hidedecorations!(a)
     hidespines!(a)
     xlims!(a, 0, 1)
     ylims!(a, 0, 1)
-    Makie.text!(a, 0, 0, text=text_summary, align=(:left, :top))
+    Makie.text!(a, 0, 1, text=rich(
+        rich("time: ", color=:gray), "$(ConcurrentSim.now(prot.sim))",
+        rich("\nregister: ", color=:gray), "$(compactstr(prot.net[prot.node]))",
+        rich("\n\nFlow: ", font=:bold, color=:teal), "$(get(counts, QuantumSavory.ProtocolZoo.Flow, 0))",
+        rich("\nQDatagram: ", font=:bold, color=:dodgerblue), "$(get(counts, QuantumSavory.ProtocolZoo.QDatagram, 0))",
+        rich("\nQDatagramSuccess: ", font=:bold, color=:dodgerblue), "$(get(counts, QuantumSavory.ProtocolZoo.QTCP.QDatagramSuccess, 0))",
+        rich("\nLinkLevelReplyAtSource: ", font=:bold, color=:purple), "$(get(counts, QuantumSavory.ProtocolZoo.LinkLevelReplyAtSource, 0))",
+        rich("\nQTCPPairBegin: ", font=:bold, color=:green), "$(get(counts, QuantumSavory.ProtocolZoo.QTCPPairBegin, 0))",
+        rich("\nQTCPPairEnd: ", font=:bold, color=:orange), "$(get(counts, QuantumSavory.ProtocolZoo.QTCPPairEnd, 0))",
+        rich("\n\n", color=:gray), "$pairs_str",
+    ), align=(:left, :top))
 end
 
 function protshowimage(subfig, prot::QuantumSavory.ProtocolZoo.NetworkNodeController)
@@ -74,21 +81,22 @@ function protshowimage(subfig, prot::QuantumSavory.ProtocolZoo.NetworkNodeContro
     outgoing = count(d -> d.flow_src == prot.node, datagrams)
     next_hops = QuantumSavory.ProtocolZoo._qtcp_inferred_next_hops(prot.net.graph, prot.node, datagrams)
     hops_str = isempty(next_hops) ? "none" : join(("$(flow_uuid).$(seq_num)->$(hop)" for ((flow_uuid, seq_num, _), hop) in sort(collect(next_hops); by=first)), ", ")
-    text_summary = join([
-        "neighbors: $(join(sort(collect(Graphs.neighbors(prot.net.graph, prot.node))), ", "))",
-        "degree: $(Graphs.degree(prot.net.graph, prot.node))",
-        "QDatagram in/out: $(incoming)/$(outgoing)",
-        "LinkLevelReply: $(get(counts, QuantumSavory.ProtocolZoo.LinkLevelReply, 0))",
-        "LinkLevelReplyAtHop: $(get(counts, QuantumSavory.ProtocolZoo.LinkLevelReplyAtHop, 0))",
-        "next hops: $(hops_str)",
-    ], "\n")
-    Label(subfig[1,1], text="NetworkNodeController @ node $(prot.node)", tellwidth=false)
+    neighbors = collect(Graphs.neighbors(prot.net.graph, prot.node))
+    Label(subfig[1,1], text=rich("NetworkNodeController @ node ", rich("$(prot.node)", font=:bold)), tellwidth=false)
     a = Axis(subfig[2,1])
     hidedecorations!(a)
     hidespines!(a)
     xlims!(a, 0, 1)
     ylims!(a, 0, 1)
-    Makie.text!(a, 0, 0, text=text_summary, align=(:left, :top))
+    Makie.text!(a, 0, 1, text=rich(
+        rich("neighbors: ", color=:gray), "$(join(sort(neighbors), ", "))",
+        rich("\ndegree: ", color=:gray), "$(Graphs.degree(prot.net.graph, prot.node))",
+        rich("\n\nQDatagram ", font=:bold, color=:dodgerblue),
+        rich("in/out: "), "$(incoming)/$(outgoing)",
+        rich("\nLinkLevelReply: ", font=:bold, color=:purple), "$(get(counts, QuantumSavory.ProtocolZoo.LinkLevelReply, 0))",
+        rich("\nLinkLevelReplyAtHop: ", font=:bold, color=:purple), "$(get(counts, QuantumSavory.ProtocolZoo.LinkLevelReplyAtHop, 0))",
+        rich("\n\nnext hops: ", color=:gray), "$hops_str",
+    ), align=(:left, :top))
 end
 
 function protshowimage(subfig, prot::QuantumSavory.ProtocolZoo.LinkController)
@@ -96,18 +104,28 @@ function protshowimage(subfig, prot::QuantumSavory.ProtocolZoo.LinkController)
     mb_b = messagebuffer(prot.net, prot.nodeB)
     counts_a = QuantumSavory.ProtocolZoo._qtcp_message_counts(mb_a)
     counts_b = QuantumSavory.ProtocolZoo._qtcp_message_counts(mb_b)
-    text_summary = join([
-        "time: $(ConcurrentSim.now(prot.sim))",
-        "A $(prot.nodeA) $(compactstr(prot.net[prot.nodeA])) slots=$(nsubsystems(prot.net[prot.nodeA]))",
-        "  req=$(get(counts_a, QuantumSavory.ProtocolZoo.LinkLevelRequest, 0)) reply=$(get(counts_a, QuantumSavory.ProtocolZoo.LinkLevelReply, 0)) at_hop=$(get(counts_a, QuantumSavory.ProtocolZoo.LinkLevelReplyAtHop, 0))",
-        "B $(prot.nodeB) $(compactstr(prot.net[prot.nodeB])) slots=$(nsubsystems(prot.net[prot.nodeB]))",
-        "  req=$(get(counts_b, QuantumSavory.ProtocolZoo.LinkLevelRequest, 0)) reply=$(get(counts_b, QuantumSavory.ProtocolZoo.LinkLevelReply, 0)) at_hop=$(get(counts_b, QuantumSavory.ProtocolZoo.LinkLevelReplyAtHop, 0))",
-    ], "\n")
-    Label(subfig[1,1], text="LinkController $(prot.nodeA) <-> $(prot.nodeB)", tellwidth=false)
+    Label(subfig[1,1], text=rich(
+        "LinkController ",
+        rich("$(prot.nodeA)", color=:dodgerblue), rich(" <-> ", color=:gray), rich("$(prot.nodeB)", color=:orange),
+    ), tellwidth=false)
     a = Axis(subfig[2,1])
     hidedecorations!(a)
     hidespines!(a)
     xlims!(a, 0, 1)
     ylims!(a, 0, 1)
-    Makie.text!(a, 0, 0, text=text_summary, align=(:left, :top))
+    Makie.text!(a, 0, 1, text=rich(
+        rich("time: ", color=:gray), "$(ConcurrentSim.now(prot.sim))",
+        rich("\n\n", font=:bold, color=:dodgerblue), "Node $(prot.nodeA)",
+        rich("\n  register: ", color=:gray), "$(compactstr(prot.net[prot.nodeA]))",
+        rich("\n  slots: ", color=:gray), "$(nsubsystems(prot.net[prot.nodeA]))",
+        rich("\n  req: ", color=:gray), "$(get(counts_a, QuantumSavory.ProtocolZoo.LinkLevelRequest, 0))",
+        rich("  reply: ", color=:gray), "$(get(counts_a, QuantumSavory.ProtocolZoo.LinkLevelReply, 0))",
+        rich("  at_hop: ", color=:gray), "$(get(counts_a, QuantumSavory.ProtocolZoo.LinkLevelReplyAtHop, 0))",
+        rich("\n\n", font=:bold, color=:orange), "Node $(prot.nodeB)",
+        rich("\n  register: ", color=:gray), "$(compactstr(prot.net[prot.nodeB]))",
+        rich("\n  slots: ", color=:gray), "$(nsubsystems(prot.net[prot.nodeB]))",
+        rich("\n  req: ", color=:gray), "$(get(counts_b, QuantumSavory.ProtocolZoo.LinkLevelRequest, 0))",
+        rich("  reply: ", color=:gray), "$(get(counts_b, QuantumSavory.ProtocolZoo.LinkLevelReply, 0))",
+        rich("  at_hop: ", color=:gray), "$(get(counts_b, QuantumSavory.ProtocolZoo.LinkLevelReplyAtHop, 0))",
+    ), align=(:left, :top))
 end
